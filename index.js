@@ -5,7 +5,7 @@ var http = require("http");
 var path = require('path');
 var pdfParse = require("pdf-parse");
 var pdf2table = require("pdf2table");
-const { readFile, unlink } = require('fs');
+const { readFile, unlink, existsSync, mkdirSync } = require('fs');
 
 process.env.PORT = 9000;
 var app = express();
@@ -13,29 +13,30 @@ var app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use(express.static(path.join(__dirname, 'public')));
-
 app.get("/" , (req, res, next) => {
 	res.send("Hello");
 });
 
 app.post("/extract", (req, res, next) => {
   var form = new formidable.IncomingForm();
+  if(!existsSync("./temp")){
+    mkdirSync("./temp");
+  }
   form.uploadDir = "./temp";
   form.keepExtensions = true;
   form.parse(req, (err, fields, files) => {
-    if(!files.pdf || files.pdf){
-      if((files.pdf && !files.pdf.size > 0)){
-        unlink(files.pdf.path, () => {
-          return res
-              .status(400)
-              .json({msg: "pdf file error"});
-        });
-      }else{
-          return res
-                  .status(400)
-                  .json({msg: "pdf field is required"});
-      }
+    if((files.pdf && !files.pdf.size > 0)){
+      unlink(files.pdf.path, () => {
+        return res
+            .status(400)
+            .json({msg: "pdf file error"});
+      });
+    }else if(!files.pdf){
+      unlink(files.pdf.path, () => {
+        return res
+            .status(400)
+            .json({msg: "pdf field required"});
+      });
     }
     var type = req.query.type || "text";
     switch(type){
@@ -59,14 +60,14 @@ function toText(file, res, next){
     unlink(file.path, () => {
       res.json(data);
     });
-  }).catch(err => next(createError(err)));
+  }).catch(err => next(createError(500)));
 }
 
 function toTable(file, res, next){
   readFile(file.path, function (err, buffer) {
       if (err) return next(createError(err));
       pdf2table.parse(buffer, function (err, rows, rowsdebug) {
-          if(err) return next(createError(err));
+          if(err) return next(createError(500));
           unlink(file.path, () => {
             res.json(rows);
           });
@@ -86,8 +87,7 @@ app.use(function(err, req, res, next) {
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
   // render the error page
-  res.status(500);
-  res.send("error", err);
+  res.status(500).send("error");
 });
 
 const server = http.createServer(app);
