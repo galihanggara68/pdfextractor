@@ -38,7 +38,7 @@ router.post("/extract", (req, res, next) => {
           break;
         default:
           unlink(files.pdf.path, () => {
-            res.status(400).json({msg: "type error"});
+            return res.status(400).json({msg: "type error"});
           });
           break;
       }
@@ -48,7 +48,7 @@ router.post("/extract", (req, res, next) => {
 function toText(file, res, next){
     pdfParse(file.path).then(data => {
         unlink(file.path, () => {
-            res.json(data);
+            return res.json(data);
         });
     }).catch(err => next(createError(500)));
 }
@@ -59,7 +59,7 @@ readFile(file.path, function (err, buffer) {
     pdf2table.parse(buffer, function (pdfErr, rows, rowsdebug) {
         if(pdfErr) return next(createError(500));
         unlink(file.path, () => {
-            res.json(rows);
+            return res.json(rows);
         });
     });
 });

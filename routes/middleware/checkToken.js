@@ -11,7 +11,7 @@ function verifyToken(req, res, next) {
     }
 
     try{
-        let decoded = jwt.verify(token, config.secret);
+        const decoded = jwt.verify(token, config.secret);
         userDa.getOne({user_id: decoded.id}).then(user => {
             if(!user){
                 return res.status(403).send({ auth: false, message: 'Unauthorized' });
